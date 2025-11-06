@@ -205,11 +205,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-```
-
-## File 3: `requirements.txt`
-```
-mcp>=1.8.1
-websockets>=11.0.3
-python-dotenv>=1.0.0
-pydantic>=2.11.4
