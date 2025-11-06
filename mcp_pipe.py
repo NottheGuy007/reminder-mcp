@@ -18,7 +18,7 @@ logger = logging.getLogger("mcp_pipe")
 class MCPPipe:
     def __init__(self, script_path, token):
         self.script_path = script_path
-        self.token = token
+        self.token = token.strip()  # Remove any whitespace
         self.ws = None
         self.process = None
         self.running = False
@@ -42,6 +42,8 @@ class MCPPipe:
     async def connect_websocket(self):
         uri = f"wss://api.xiaozhi.me/mcp/?token={self.token}"
         logger.info(f"Connecting to Xiaozhi WebSocket...")
+        logger.info(f"Token length: {len(self.token)} characters")
+        logger.info(f"Token starts with: {self.token[:10]}..." if len(self.token) > 10 else f"Token: {self.token}")
         
         try:
             self.ws = await websockets.connect(
@@ -54,6 +56,9 @@ class MCPPipe:
             return True
         except Exception as e:
             logger.error(f"WebSocket connection failed: {e}")
+            if "401" in str(e):
+                logger.error("HTTP 401 - Token authentication failed. Please verify your XIAOZHI_TOKEN is correct.")
+                logger.error("Get your token from: https://api.xiaozhi.me or your Xiaozhi account settings")
             return False
 
     async def read_from_process(self):
@@ -177,14 +182,38 @@ class MCPPipe:
 
 async def main():
     token = os.getenv("XIAOZHI_TOKEN")
+    
     if not token:
-        logger.error("XIAOZHI_TOKEN environment variable not set")
+        logger.error("=" * 60)
+        logger.error("ERROR: XIAOZHI_TOKEN environment variable not set")
+        logger.error("=" * 60)
+        logger.error("Please set your token:")
+        logger.error("  export XIAOZHI_TOKEN=your_actual_token")
+        logger.error("")
+        logger.error("Get your token from:")
+        logger.error("  - Xiaozhi account settings")
+        logger.error("  - https://api.xiaozhi.me")
+        logger.error("=" * 60)
+        sys.exit(1)
+    
+    token = token.strip()
+    
+    if len(token) < 10:
+        logger.error("=" * 60)
+        logger.error("ERROR: XIAOZHI_TOKEN seems too short")
+        logger.error(f"Token length: {len(token)} characters")
+        logger.error("Please verify your token is correct")
+        logger.error("=" * 60)
         sys.exit(1)
     
     script_path = os.getenv("MCP_SCRIPT", "reminder_server.py")
     
-    logger.info(f"Starting Xiaozhi MCP Pipe")
+    logger.info("=" * 60)
+    logger.info("Starting Xiaozhi MCP Reminder Server")
+    logger.info("=" * 60)
     logger.info(f"Script: {script_path}")
+    logger.info(f"Token: {token[:10]}...{token[-4:]}")
+    logger.info("=" * 60)
     
     pipe = MCPPipe(script_path, token)
     
